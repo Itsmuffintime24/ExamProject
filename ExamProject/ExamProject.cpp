@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <fstream>
 
 
 using namespace std;
@@ -26,7 +27,15 @@ private:
         string userName;
     };
 
+    struct Goal {
+        string title;
+        string frequency;
+        bool completed = false;
+    };
+
     map<string, vector<Event>> userEvents;
+
+    map<string, vector<Goal>> userGoals;
 
 
 public:
@@ -36,8 +45,135 @@ public:
 
 
     Basic() {
-        addUser("admin", "Abc4312");
+            }
+
+    ~Basic() {
+        saveInfo();
     }
+
+    void saveInfo() {
+        ofstream save("save.txt");
+        if (!save.is_open()) {
+            cout << "Unable to open save file.\n";
+            return;
+        }
+
+        save << "[LOGINS]\n";
+        for (const string& login : logins) {
+            save << login << "\n";
+        }
+
+        save << "[PASSWORDS]\n";
+        for (const string& password : passwords) {
+            save << password << "\n";
+        }
+
+        save << "[SIGNED_IN]\n";
+        save << signedInLogin << "\n";
+        save << signedInPassword << "\n";
+
+        save << "[EVENTS]\n";
+        for (const auto& pair : userEvents) {
+            const string& user = pair.first;
+            for (const Event& e : pair.second) {
+                save << user << "|" << e.type << "|" << e.title << "|" << e.deadlineString << "\n";
+            }
+        }
+
+        save << "[GOALS]\n";
+        for (const auto& pair : userGoals) {
+            const string& user = pair.first;
+            for (const Goal& g : pair.second) {
+                save << user << "|" << g.title << "|" << g.frequency << "|" << g.completed << "\n";
+            }
+        }
+
+        save.close();
+        cout << "Data saved successfully.\n";
+    }
+
+    void loadInfo() {
+        ifstream file("save.txt");
+        if (!file.is_open()) {
+            cout << "No saved data found.\n";
+            return;
+        }
+
+        string line;
+        string section;
+
+        while (getline(file, line)) {
+            if (line.empty()) continue;
+
+            if (line == "[LOGINS]") {
+                section = "logins";
+                continue;
+            }
+            else if (line == "[PASSWORDS]") {
+                section = "passwords";
+                continue;
+            }
+            else if (line == "[SIGNED_IN]") {
+                section = "signedin";
+                continue;
+            }
+            else if (line == "[EVENTS]") {
+                section = "events";
+                continue;
+            }
+            else if (line == "[GOALS]") {
+                section = "goals";
+                continue;
+            }
+
+            if (section == "logins") {
+                logins.push_back(line);
+            }
+            else if (section == "passwords") {
+                passwords.push_back(line);
+            }
+            else if (section == "signedin") {
+                if (signedInLogin.empty()) signedInLogin = line;
+                else signedInPassword = line;
+            }
+            else if (section == "events") {
+                size_t p1 = line.find('|');
+                size_t p2 = line.find('|', p1 + 1);
+                size_t p3 = line.find('|', p2 + 1);
+
+                if (p1 == string::npos || p2 == string::npos || p3 == string::npos) continue;
+
+                string user = line.substr(0, p1);
+                string type = line.substr(p1 + 1, p2 - p1 - 1);
+                string title = line.substr(p2 + 1, p3 - p2 - 1);
+                string deadline = line.substr(p3 + 1);
+
+                Event e{ title, type, deadline, user };
+                userEvents[user].push_back(e);
+            }
+            else if (section == "goals") {
+                size_t p1 = line.find('|');
+                size_t p2 = line.find('|', p1 + 1);
+                size_t p3 = line.find('|', p2 + 1);
+
+                if (p1 == string::npos || p2 == string::npos || p3 == string::npos) continue;
+
+                string user = line.substr(0, p1);
+                string title = line.substr(p1 + 1, p2 - p1 - 1);
+                string frequency = line.substr(p2 + 1, p3 - p2 - 1);
+                string completedStr = line.substr(p3 + 1);
+
+                bool completed = (completedStr == "1");
+
+                Goal g{ title, frequency, completed };
+                userGoals[user].push_back(g);
+            }
+        }
+
+        file.close();
+        cout << "Data loaded successfully.\n";
+    }
+
 
     bool addUser(const string& login, const string& password) {
         if (logins.size() >= 40) {
@@ -71,11 +207,10 @@ public:
             cout << "Welcome to Project Planner made by Gavrylov Rostyslav!\n" << endl;
 
             cout << "=== MAIN MENU ===" << endl;
-            cout << "1 - Events (Save, Add, Delete)" << endl;
-            cout << "2 - Goals (Status, Update, Regularity)" << endl;
-            cout << "3 - Information (Storage, Encryption)" << endl;
-            cout << "5 - Log out" << endl;
-            cout << "6 - Exit the program" << endl;
+            cout << "1 - Events" << endl;
+            cout << "2 - Goals" << endl;
+            cout << "3 - Log out" << endl;
+            cout << "4 - Exit the program" << endl;
 
             cout << "\nEnter your choice: ";
             cin >> choice;
@@ -84,18 +219,9 @@ public:
                 eventsMenu();
             }
             else if (choice == "2") {
-                cout << "Goals module is under development...\n";
-                system("pause");
+                goalsMenu();
             }
             else if (choice == "3") {
-                cout << "Information module is under development...\n";
-                system("pause");
-            }
-            else if (choice == "4") {
-                cout << "Interaction menu is under development...\n";
-                system("pause");
-            }
-            else if (choice == "5") {
                 keepSignedIn = false;
                 isLoggedIn = false;
                 signedInLogin = "";
@@ -104,8 +230,9 @@ public:
                 system("pause");
                 return;
             }
-            else if (choice == "6") {
+            else if (choice == "4") {
                 cout << "Thank you for using the program! Goodbye!\n";
+                saveInfo();
                 exit(0);
             }
             else {
@@ -192,7 +319,10 @@ public:
                 cin >> choice;
                 if (choice == "0") break;
                 else if (choice == "1") return;
-                else if (choice == "2") exit(0);
+                else if (choice == "2") {
+                    saveInfo();
+                    exit(0);
+                }
             }
 
         } while (true);
@@ -245,7 +375,10 @@ public:
                 cin >> choice;
                 if (choice == "0") break;
                 else if (choice == "1") return;
-                else if (choice == "2") exit(0);
+                else if (choice == "2") {
+                    saveInfo();
+                    exit(0);
+                }
             }
         }
     }
@@ -374,6 +507,140 @@ public:
         }
     }
 
+    void goalsMenu() {
+        string choice;
+        string currentUser = signedInLogin;
+        vector<Goal>& goals = userGoals[currentUser];
+
+        while (true) {
+            system("cls");
+            title();
+
+            cout << "=== GOALS MENU ===\n";
+            cout << "1 - Add new goal\n";
+            cout << "2 - View all goals\n";
+            cout << "3 - Edit goal\n";
+            cout << "4 - Mark goal as completed / not completed\n";
+            cout << "5 - Delete goal\n";
+            cout << "6 - Return to main menu\n\n";
+            cout << "Enter your choice: ";
+            cin >> choice;
+
+            if (choice == "1") {
+                Goal newGoal;
+                cin.ignore();
+                cout << "Enter goal title: ";
+                getline(cin, newGoal.title);
+                cout << "Enter frequency (daily / weekly / monthly): ";
+                getline(cin, newGoal.frequency);
+                goals.push_back(newGoal);
+                cout << "Goal added!\n";
+                system("pause");
+            }
+
+            else if (choice == "2") {
+                if (goals.empty()) {
+                    cout << "No goals found.\n";
+                }
+                else {
+                    for (size_t i = 0; i < goals.size(); ++i) {
+                        cout << i + 1 << ". [" << goals[i].frequency << "] "
+                            << goals[i].title
+                            << " - " << (goals[i].completed ? "Completed" : "Not completed") << endl;
+                    }
+                }
+                system("pause");
+            }
+
+            else if (choice == "3") {
+                if (goals.empty()) {
+                    cout << "Nothing to edit.\n";
+                    system("pause");
+                    continue;
+                }
+                int index;
+                for (size_t i = 0; i < goals.size(); ++i) {
+                    cout << i + 1 << ". " << goals[i].title << " (" << goals[i].frequency << ")\n";
+                }
+                cout << "\nEnter number of goal to edit: ";
+                cin >> index;
+                if (index < 1 || index > goals.size()) {
+                    cout << "Invalid index.\n";
+                }
+                else {
+                    cin.ignore();
+                    index--;
+                    cout << "Enter new title (leave empty to keep current): ";
+                    string newTitle;
+                    getline(cin, newTitle);
+                    if (!newTitle.empty()) goals[index].title = newTitle;
+
+                    cout << "Enter new frequency (leave empty to keep current): ";
+                    string newFreq;
+                    getline(cin, newFreq);
+                    if (!newFreq.empty()) goals[index].frequency = newFreq;
+
+                    cout << "Goal updated!\n";
+                }
+                system("pause");
+            }
+
+            else if (choice == "4") {
+                if (goals.empty()) {
+                    cout << "No goals to update.\n";
+                    system("pause");
+                    continue;
+                }
+                int index;
+                for (size_t i = 0; i < goals.size(); ++i) {
+                    cout << i + 1 << ". " << goals[i].title
+                        << " - " << (goals[i].completed ? "Completed" : "Not completed") << endl;
+                }
+                cout << "\nEnter number of goal to toggle status: ";
+                cin >> index;
+                if (index < 1 || index > goals.size()) {
+                    cout << "Invalid index.\n";
+                }
+                else {
+                    index--;
+                    goals[index].completed = !goals[index].completed;
+                    cout << "Status updated!\n";
+                }
+                system("pause");
+            }
+
+            else if (choice == "5") {
+                if (goals.empty()) {
+                    cout << "Nothing to delete.\n";
+                    system("pause");
+                    continue;
+                }
+                int index;
+                for (size_t i = 0; i < goals.size(); ++i) {
+                    cout << i + 1 << ". " << goals[i].title << endl;
+                }
+                cout << "\nEnter number of goal to delete: ";
+                cin >> index;
+                if (index < 1 || index > goals.size()) {
+                    cout << "Invalid index.\n";
+                }
+                else {
+                    goals.erase(goals.begin() + index - 1);
+                    cout << "Goal deleted!\n";
+                }
+                system("pause");
+            }
+
+            else if (choice == "6") {
+                return;
+            }
+
+            else {
+                cout << "Invalid choice. Try again.\n";
+                system("pause");
+            }
+        }
+    }
 
 
 };
@@ -383,6 +650,8 @@ int main()
 {
     Basic stuff;
     string choice;
+
+    stuff.loadInfo();
 
     while (true) {
         if (stuff.isSignedIn() || stuff.isLoggedIn) {
@@ -395,13 +664,18 @@ int main()
         cout << "====WELCOME====" << endl;
         cout << "1 - Log in" << endl;
         cout << "2 - Sign in" << endl;
-        cout << "3 - Leave" << endl;
+        cout << "3 - Leave\n" << endl;
 
+        cout << "Enter your choice: ";
         cin >> choice;
 
         if (choice == "1") stuff.loginMenu();
         else if (choice == "2") stuff.signinMenu();
-        else if (choice == "3") return 0;
+        else if (choice == "3") {
+            stuff.saveInfo();
+            exit(0);
+        }
+        else cout << "Invalid choice. Try again" << endl;
+        system("pause");
     }
 }
-
