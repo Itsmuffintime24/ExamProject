@@ -12,6 +12,9 @@ private:
     string* logins;
     string* passwords;
     
+    string signedInLogin;
+    string signedInPassword;
+
 
 public:
 
@@ -111,14 +114,14 @@ public:
 
             if (!emailValid || !passwordValid) greeting = "Please try again! Enter email and password you want to register in this format --> email password";
             else break;
-
-            do {
+            
+            while (true) {
                 cout << "Enter:\n0 - if you'd like to continue\n1 - if you'd like to leave to main menu\n2 - if you'd like to close the app" << endl;
                 cin >> choice;
                 if (choice == "0") break;
                 else if (choice == "1") return;
                 else if (choice == "2") exit(0);
-            } while (true);
+            }
             
         } while (true);
 
@@ -138,36 +141,52 @@ public:
         system("cls");
         title();
 
-        do {
+        while (true) {
             system("cls");
             title();
 
             cout << "Please enter email and password of account you want to log into in this format --> email password" << endl;
             cin >> userEmail >> userPassword;
             
-            if (login(userEmail, userPassword)) {
+            if (login(userEmail, userPassword)) { 
                 while (true) {
                     cout << "Welcome back, would you like to keep being signed in?\n1 - Yes\n0 - No" << endl;
                     cin >> choice;
-                    if (choice == "1") { keepSignedIn = true; break; }
+                    if (choice == "1") {
+                        keepSignedIn = true;
+                        signedInLogin = userEmail;
+                        signedInPassword = userPassword;
+                        break;
+                    }
+
                     else if (choice == "0") { keepSignedIn = false; break; }
                 }
-                
+            }
+
+
+            while (true) {
+                cout << "Enter:\n0 - if you'd like to continue\n1 - if you'd like to leave to main menu\n2 - if you'd like to close the app" << endl;
+                cin >> choice;
+                if (choice == "0") break;
+                else if (choice == "1") return;
+                else if (choice == "2") exit(0);
             }
 
         }
-        //Error here, fix later wanna sleeeeeeeep
+        //(No) Error here, fix later wanna sleeeeeeeep
     }
 
     bool login(const string& login, const string& password) {
         for (int i = 0; i < count; i++) {
-            if (logins[i] == login && passwords[i] == password) return true;
-            else {
-                cout << "Sorry, wrong username/password" << endl;
-                return false;
+            if (logins[i] == login && passwords[i] == password) { 
+                return true;
+                break;
             }
         }
+        return false;
     }
+
+
 
 };
 
@@ -176,7 +195,9 @@ int main()
     Basic stuff;
     string choice;
 
-    if (stuff.keepSignedIn) 
+    if (stuff.keepSignedIn) {
+
+    }
 
     while (true) {
         system("cls");
@@ -190,10 +211,8 @@ int main()
 
         cin >> choice;
 
-        if (choice == "1");
+        if (choice == "1") stuff.loginMenu();
         else if (choice == "2") stuff.signinMenu();
         else if (choice == "3") return 0;
     }
-    
-
 }
